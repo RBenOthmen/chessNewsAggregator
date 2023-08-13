@@ -1,39 +1,34 @@
 import requests
-from bs4 import BeautifulSoup
 import csv
+from bs4 import BeautifulSoup
 
-# URL of the chess news website you want to scrape
+# The provided HTML code
 url = "https://fide.com/news"
 
-# Send an HTTP GET request to the URL
+# Create a BeautifulSoup object
 response = requests.get(url)
+soup = BeautifulSoup(response.content, 'html.parser')
 
-# Parse the HTML content of the page using BeautifulSoup
-soup = BeautifulSoup(response.content, "html.parser")
+# Find all "one-news" elements
+one_news_elements = soup.find_all(class_='one-news')
 
-# Find all the news article elements on the page (adjust selectors as needed)
-article_elements = soup.find_all("a", class_="first-section-news")
+# Find all "third-section-news__info" elements
+third_section_info_elements = soup.find_all(class_='third-section-news__info')
 
-# Initialize a list to store scraped data
-scraped_data = []
+# Extract data and save to a CSV file
+with open('chess_news.csv', 'w', newline='', encoding='utf-8') as csv_file:
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(['Title', 'Date', 'Image'])
 
-# Loop through each article element and extract relevant information
-for article in article_elements:
-    title = article.find("div", class_="one-news").text
-    article_url = article["href"]  # You can directly access the href attribute
+    for one_news in one_news_elements:
+        title = one_news.find('p').get_text()
+        date = one_news.find(class_='one-news__date').get_text() if one_news.find(class_='one-news__date') else ''
+        image_element = one_news.find('img')
+        image_url = image_element['src'] if image_element else ''
+        csv_writer.writerow([title, date, image_url])
 
-    scraped_data.append({"title": title, "article_url": article_url})
+    for third_info in third_section_info_elements:
+        title = third_info.find('p').get_text()
+        csv_writer.writerow([title, '', ''])
 
-# Specify the CSV file name
-csv_file = "chess_news.csv"
-
-# Save the scraped data to a CSV file
-with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-    fieldnames = ["title", "article_url"]
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-
-    writer.writeheader()
-    for item in scraped_data:
-        writer.writerow(item)
-
-print(f"Scraped data saved to {csv_file}")
+print("Data saved to chess_news.csv")
